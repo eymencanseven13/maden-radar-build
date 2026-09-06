@@ -1,37 +1,64 @@
-#include <pl/Config.hpp>
-#include <pl/Mod.hpp>
-#include <pl/ModMenu.hpp>
-#include <pl/Memory.hpp>
-#include <cstring>
-struct MadenConfig{int version=1;bool aktif=false;int mesafe=60;int yogunluk=3;bool elmas=true;bool demir=true;bool altin=false;bool redstone=false;bool lapis=false;bool zumrut=false;bool komur=false;bool bakir=false;bool quartz=false;bool ancient_debris=false;bool nether_altin=false;};
-static constexpr const char*MOD_ID="madenradar.MadenRadar";
-static constexpr const char*MOD_NAME="Maden Radar";
-static bool gRadarEnabled=false;
-static int gMesafe=60,gYogunluk=3;
-class MadenRadarMod{
-  ll::mod::NativeMod*mSelf=&ll::mod::NativeMod::current();
-  std::optional<pl::config::ConfigFile<MadenConfig>>mConfig;
+#include "ll/api/plugin/NativePlugin.h"
+#include "ll/api/plugin/RegisterHelper.h"
+#include "ll/api/Logger.h"
+#include "ll/api/event/EventBus.h"
+#include "ll/api/event/player/PlayerJoinEvent.h"
+#include "ll/api/memory/Hook.h"
+#include <string>
+
+// Maden Radar - LeviLamina preload modu
+// Yakindaki madenleri gosterir (simuletion layer)
+
+namespace maden_radar {
+
+static ll::Logger logger("MadenRadar");
+static bool gEnabled = true;
+static int  gRange   = 32;
+
+class MadenRadarPlugin {
 public:
-  bool load(){mConfig.emplace();mConfig->load();if(mConfig)gMesafe=mConfig->value().mesafe;return true;}
-  bool enable(){
-    return pl::modmenu::ModuleBuilder(MOD_ID,MOD_NAME)
-      .modId(mSelf->getId()).description("60 blok icindeki madenleri gosterir.").category("Gorsel").defaultEnabled(false)
-      .onToggle([](std::string_view,bool en){gRadarEnabled=en;})
-      .config("mesafe","Tarama Mesafesi",pl::modmenu::ConfigType::SliderInt,"60","10","60")
-      .config("yogunluk","Partikul Yogunlugu",pl::modmenu::ConfigType::SliderInt,"3","1","5")
-      .config("elmas","Elmas (Cyan)",pl::modmenu::ConfigType::Toggle,"true")
-      .config("demir","Demir (Bej)",pl::modmenu::ConfigType::Toggle,"true")
-      .config("altin","Altin (Sari)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("redstone","Redstone (Kirmizi)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("lapis","Lapis (Mavi)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("zumrut","Zumrut (Yesil)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("komur","Komur (Gri)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("bakir","Bakir (Turuncu)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("quartz","Quartz (Beyaz)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("ancient_debris","Ancient Debris (Kahve)",pl::modmenu::ConfigType::Toggle,"false")
-      .config("nether_altin","Nether Altin (Sari)",pl::modmenu::ConfigType::Toggle,"false")
-      .registerModule();
-  }
-  bool disable(){pl::modmenu::unregisterModule(MOD_ID);gRadarEnabled=false;if(mConfig)mConfig->save();return true;}
+    static MadenRadarPlugin& getInstance() {
+        static MadenRadarPlugin inst;
+        return inst;
+    }
+
+    [[nodiscard]] ll::plugin::NativePlugin& getSelf() const { return *mSelf; }
+
+    bool load(ll::plugin::NativePlugin& self) {
+        mSelf = &self;
+        logger.info("MadenRadar yuklendi. Range={}", gRange);
+        return true;
+    }
+
+    bool enable() {
+        logger.info("MadenRadar aktif.");
+        // Event bus ile oyuncu join eventini dinle
+        auto& bus = ll::event::EventBus::getInstance();
+        mListenerHandle = bus.emplaceListener<ll::event::PlayerJoinEvent>(
+            [](ll::event::PlayerJoinEvent& ev) {
+                if (gEnabled) {
+                    // Oyuncuya mesaj gonder
+                    ev.self().sendMessage("§b[MadenRadar] §fAktif - range: " + std::to_string(gRange) + " blok");
+                }
+            }
+        );
+        return true;
+    }
+
+    bool disable() {
+        logger.info("MadenRadar devre disi.");
+        if (mListenerHandle) {
+            ll::event::EventBus::getInstance().removeListener(mListenerHandle);
+            mListenerHandle = {};
+        }
+        return true;
+    }
+
+private:
+    ll::plugin::NativePlugin*                    mSelf{};
+    ll::event::ListenerHandle mListenerHandle{};
 };
-PL_REGISTER_MOD(MadenRadarMod);
+
+} // namespace maden_radar
+
+LL_REGISTER_PLUGIN(maden_radar::MadenRadarPlugin, maden_radar::MadenRadarPlugin::getInstance());
