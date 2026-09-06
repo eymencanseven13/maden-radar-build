@@ -6,8 +6,7 @@
   "version": "2.0.0",
   "entry": "libMadenRadar.so",
   "icon": "icon.png",
-  "overwrite_files": [
-    "icon.png"
-  ],
+  "dependencies": [],
+  "overwrite_files": [],
   "overwrite_folders": []
 }
