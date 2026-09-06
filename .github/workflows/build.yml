@@ -1,0 +1,24 @@
+name: Build MadenRadar
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: xmake-io/github-action-setup-xmake@v1
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c
+      - run: xrepo add-repo liteldev https://github.com/LiteLDev/xmake-repo
+      - run: xmake f -p android -a arm64-v8a -m release --ndk=$ANDROID_NDK_HOME -y
+      - run: xmake -y
+      - run: |
+          cp build/android/arm64-v8a/release/libMadenRadar.so .
+          zip MadenRadar_v2.levipack manifest.json icon.png libMadenRadar.so
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MadenRadar_v2
+          path: MadenRadar_v2.levipack
