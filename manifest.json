@@ -1,0 +1,13 @@
+{
+  "type": "preload-native",
+  "name": "MadenRadar",
+  "author": "LeviMod",
+  "description": "Yeni baslayanlar icin maden gosteri modu.",
+  "version": "2.0.0",
+  "entry": "libMadenRadar.so",
+  "icon": "icon.png",
+  "overwrite_files": [
+    "icon.png"
+  ],
+  "overwrite_folders": []
+}
